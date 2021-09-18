@@ -126,6 +126,7 @@ void executeOption(Option option) {
         if (putenv(option.argument) != 0)
             fprintf(stderr, "Failed to change the value of the environment variable");
         break;
+        
     } 
 }
 
