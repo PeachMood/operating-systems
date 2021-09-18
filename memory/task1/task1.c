@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <limits.h>
 #include <errno.h>
-
+#include <unistd.h> 
 
 typedef struct Option {
     char type;
@@ -23,6 +23,7 @@ typedef struct Stack {
 } Stack;
 
 Stack options;
+extern char **environ;
 
 void initStack(int size) {
     if (size <= 0) {
@@ -57,7 +58,9 @@ void deleteStack() {
 
 void executeOption(Option option) {
     char* end;
+    char path[PATH_MAX];
     long newUlimit;
+    long newSize;
     struct rlimit limit;
 
     switch (option.type)
@@ -79,6 +82,7 @@ void executeOption(Option option) {
         getrlimit(RLIMIT_FSIZE, &limit);
         printf("Soft limit on the size of a file is %lu.\n", limit.rlim_cur);
         printf("Hard limit on the size of a file is %lu.\n", limit.rlim_max);
+        break;
     case 'U':
         getrlimit(RLIMIT_FSIZE, &limit);
         newUlimit = strtol(option.argument, &end, 10);
@@ -90,15 +94,45 @@ void executeOption(Option option) {
             limit.rlim_cur = newUlimit;
             setrlimit(RLIMIT_FSIZE, &limit);
         }
-    
-
+        break;
+    case 'c':
+        getrlimit(RLIMIT_CORE, &limit);
+        printf("Maximum size of a core file that can be created is %lu.\n", limit.rlim_cur);
+        break;
+    case 'C':
+        getrlimit(RLIMIT_CORE, &limit);
+        newSize = strtol(option.argument, &end, 10);
+        if (errno == ERANGE || newSize <= 0)
+            fprintf(stderr, "Incorrect size %s.\n", option.argument);
+        else if (newSize >= limit.rlim_max) 
+            fprintf(stderr, "New size can't exceed the value of hard limit");
+        else {
+            limit.rlim_cur = newSize;
+            setrlimit(RLIMIT_CORE, &limit);
+        }
+        break;
+    case 'd':
+        if (getcwd(path, PATH_MAX) == NULL)
+            fprintf(stderr, "Could not determine the current directory");
+        else
+            printf("Current directory is %s.\n", path);
+        break;
+    case 'v':
+        printf("Environment variables:\n");
+        for (char** p = environ; *p; p++)
+            printf ("%s\n", *p);
+        break;
+    case 'V':
+        if (putenv(option.argument) != 0)
+            fprintf(stderr, "Failed to change the value of the environment variable");
+        break;
     } 
 }
 
 int main(int argc, char** argv){
     int character;
-    char* listOfOptions = "ispuV:U:";
-    char* withArguments = "V:U:";
+    char* listOfOptions = "ispucdvV:U:C:";
+    char* withArguments = "V:U:C:";
     Option newOption;
 
     initStack(5);
@@ -114,18 +148,19 @@ int main(int argc, char** argv){
             push(newOption);
         } 
         else if (character == '?') {
-            if (strchr(withArguments, optopt) != NULL) {
+            if (strchr(withArguments, optopt) != NULL)
                 fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-            }
+            else if (optopt == ' ')
+                fprintf (stderr, "Missing option character");
             else
                 fprintf (stderr, "Unknown option -%c.\n", optopt);
         }
     }
 
-    int size = options.count;
-    for (int i = 0; i < size; ++i)
+    int count = options.count;
+    for (int i = 0; i < count; ++i)
         executeOption(pop());
-    
     deleteStack();
+
     return 0;
 }
