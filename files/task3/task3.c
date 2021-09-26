@@ -13,6 +13,8 @@ void changeFile(FILE* file) {
 
 int main() {
     FILE* file;
+    
+    printf("%d %d\n", getuid(), geteuid());
     changeFile(file);
 
     uid_t realUid = getuid();
@@ -21,8 +23,8 @@ int main() {
         setuid(realUid);
     }
 
-    printf("%d %d", getuid(), geteuid());
     changeFile(file);
+    printf("%d %d\n", getuid(), geteuid());
 
     return 0;
 }
