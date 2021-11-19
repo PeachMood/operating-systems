@@ -28,7 +28,9 @@
       fprintf(stderr, "Failed to capture file %s", file);
       exit(3);
     }
-    char* command = strcat("nano ", file);
+    char* command = malloc(strlen(file) + 10);
+    command = strcat(command, "nano ");
+    command = strcat(command, file);
     system(command);
     
     lock.l_type = F_UNLCK;
