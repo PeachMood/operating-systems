@@ -17,6 +17,8 @@ void main() {
         exit(1);
     }
 
+
+
     struct termios new_settings = stored_settings;
     new_settings.c_lflag &= (~ICANON & ~ISIG);
 	new_settings.c_cc[VMIN] = 1;
@@ -42,6 +44,12 @@ void main() {
     }
     
 	tcsetattr(fd, TCSAFLUSH, &stored_settings);
+    
+    // Extra task
+    new_settings.c_lflag |= (ICANON | ISIG);
+    printf("Stored settings: %u\n", stored_settings.c_lflag);
+    printf("New settings: %u\n", new_settings.c_lflag);
+
     close(fd);
     exit(0);
 }
